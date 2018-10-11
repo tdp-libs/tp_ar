@@ -7,7 +7,7 @@ namespace tp_ar
 {
 
 //##################################################################################################
-class TP_AR_SHARED_EXPORT ArKitSession : AbstractSession
+class TP_AR_SHARED_EXPORT ArKitSession : public AbstractSession
 {
 public:
   //################################################################################################

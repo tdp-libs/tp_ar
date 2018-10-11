@@ -1,4 +1,5 @@
 #include "tp_ar/arkit/ArKitShim.h"
+#include "tp_ar/Frame.h"
 
 #include "tp_utils/DebugUtils.h"
 
@@ -18,13 +19,23 @@ namespace tp_ar
 //##################################################################################################
 struct ArKitShim::Private
 {
+  std::function<void(const Frame&)> frameReceivedCallback;
   ARSession* session NS_AVAILABLE_IOS(12_0){nullptr};
-  ArKitShimPrivate* delegate{nullptr};
+  ArKitShimPrivate* delegate{nullptr};  
+  tp_ar::Frame frame;
+  std::vector<uint8_t> data;
+
+  //################################################################################################
+  Private(const std::function<void(const Frame&)>& frameReceivedCallback_):
+    frameReceivedCallback(frameReceivedCallback_)
+  {
+
+  }
 };
 
 //##################################################################################################
-ArKitShim::ArKitShim():
-  d(new Private())
+ArKitShim::ArKitShim(const std::function<void(const Frame&)>& frameReceivedCallback):
+  d(new Private(frameReceivedCallback))
 {
   if(@available(iOS 12, *))
   {
@@ -75,8 +86,23 @@ ArKitShim::~ArKitShim()
 {
   TP_UNUSED(session);
   TP_UNUSED(frame);
+  auto i = [frame capturedImage];
 
-  tpDebug() << "didUpdateFrame";
+  CVPixelBufferLockBaseAddress(i, kCVPixelBufferLock_ReadOnly);
+
+  [self d]->frame.w = CVPixelBufferGetWidth(i);
+  [self d]->frame.h = CVPixelBufferGetHeight(i);
+  [self d]->frame.bytesPerRow = CVPixelBufferGetBytesPerRow(i);
+
+  size_t sizeInBytes = [self d]->frame.h * [self d]->frame.bytesPerRow;
+  [self d]->data.resize(sizeInBytes);
+  memcpy([self d]->data.data(), CVPixelBufferGetBaseAddress(i), sizeInBytes);
+
+  [self d]->frame.data = [self d]->data.data();
+
+#warning do something about the format here
+
+  [self d]->frameReceivedCallback([self d]->frame);
 }
 
 #pragma mark - ARSessionObserver

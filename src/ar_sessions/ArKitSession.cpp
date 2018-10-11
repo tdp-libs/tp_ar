@@ -12,19 +12,23 @@ namespace tp_ar
 struct ArKitSession::Private
 {
   tp_ar::ArKitShim* arShim{nullptr};
+  QTimer timer;
+
+  ~Private()
+  {
+    delete arShim;
+  }
 };
 
 //##################################################################################################
 ArKitSession::ArKitSession():
   d(new Private())
 {
-  QTimer* timer = new QTimer();
-  timer->start(1000);
-  timer->setSingleShot(true);
-  QObject::connect(timer, &QTimer::timeout, [&, timer]()
+  d->timer.start(1000);
+  d->timer.setSingleShot(true);
+  QObject::connect(&d->timer, &QTimer::timeout, [&]()
   {
-    timer->deleteLater();
-    d->arShim = new tp_ar::ArKitShim();
+    d->arShim = new tp_ar::ArKitShim([&](const Frame& frame){frameReceived(frame);});
   });
 }
 

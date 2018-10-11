@@ -21,7 +21,11 @@ public:
   void addFrameReceivedCallback(const std::function<void(const Frame&)>* frameReceivedCallback);
 
   //################################################################################################
-  void frameFrameReceivedCallback(const std::function<void(const Frame&)>* frameReceivedCallback);
+  void removeFrameReceivedCallback(const std::function<void(const Frame&)>* frameReceivedCallback);
+
+protected:
+  //################################################################################################
+  void frameReceived(const Frame& frame);
 
 private:
   struct Private;

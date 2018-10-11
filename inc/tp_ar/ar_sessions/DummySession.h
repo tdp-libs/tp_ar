@@ -7,7 +7,7 @@ namespace tp_ar
 {
 
 //##################################################################################################
-class TP_AR_SHARED_EXPORT DummySession : AbstractSession
+class TP_AR_SHARED_EXPORT DummySession : public AbstractSession
 {
 public:
   //################################################################################################
