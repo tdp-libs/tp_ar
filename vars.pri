@@ -6,6 +6,9 @@ DEFINES += TP_AR_LIBRARY
 #SOURCES += src/Globals.cpp
 HEADERS += inc/tp_ar/Globals.h
 
+SOURCES += src/Frame.cpp
+HEADERS += inc/tp_ar/Frame.h
+
 SOURCES += src/AbstractSession.cpp
 HEADERS += inc/tp_ar/AbstractSession.h
 
@@ -19,8 +22,6 @@ android{
 }
 
 else:iphoneos{
-
-LIBS += -framework ARKit
 
 SOURCES += src/ar_sessions/ArKitSession.cpp
 HEADERS += inc/tp_ar/ar_sessions/ArKitSession.h

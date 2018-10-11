@@ -5,6 +5,7 @@
 
 namespace tp_ar
 {
+struct Frame;
 
 //##################################################################################################
 class TP_AR_SHARED_EXPORT AbstractSession
@@ -15,6 +16,12 @@ public:
 
   //################################################################################################
   virtual ~AbstractSession();
+
+  //################################################################################################
+  void addFrameReceivedCallback(const std::function<void(const Frame&)>* frameReceivedCallback);
+
+  //################################################################################################
+  void frameFrameReceivedCallback(const std::function<void(const Frame&)>* frameReceivedCallback);
 
 private:
   struct Private;
