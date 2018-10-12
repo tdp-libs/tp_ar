@@ -38,4 +38,11 @@ ArKitSession::~ArKitSession()
   delete d;
 }
 
+//################################################################################################
+void ArKitSession::viewFrame(const std::function<void(const tp_ar::Frame&)>& closure)
+{
+  if(d->arShim)
+    d->arShim->viewFrame(closure);
+}
+
 }

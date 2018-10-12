@@ -2,6 +2,7 @@
 #include "tp_ar/Frame.h"
 
 #include "tp_utils/DebugUtils.h"
+#include "tp_utils/MutexUtils.h"
 
 #import <ARKit/ARKit.h>
 
@@ -20,8 +21,11 @@ namespace tp_ar
 struct ArKitShim::Private
 {
   std::function<void(const Frame&)> frameReceivedCallback;
+
   ARSession* session NS_AVAILABLE_IOS(12_0){nullptr};
-  ArKitShimPrivate* delegate{nullptr};  
+  ArKitShimPrivate* delegate{nullptr};    
+
+  TPMutex mutex{TPM};
   tp_ar::Frame frame;
   std::vector<uint8_t> data;
 
@@ -58,6 +62,13 @@ ArKitShim::~ArKitShim()
   delete d;
 }
 
+//##################################################################################################
+void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closure)
+{
+  TP_MUTEX_LOCKER(d->mutex);
+  closure(d->frame);
+}
+
 }
 
 //##################################################################################################
@@ -90,17 +101,47 @@ ArKitShim::~ArKitShim()
 
   CVPixelBufferLockBaseAddress(i, kCVPixelBufferLock_ReadOnly);
 
+  TP_MUTEX_LOCKER(d->mutex);
+
   [self d]->frame.w = CVPixelBufferGetWidth(i);
   [self d]->frame.h = CVPixelBufferGetHeight(i);
-  [self d]->frame.bytesPerRow = CVPixelBufferGetBytesPerRow(i);
+  [self d]->frame.bytesPerRow = [self d]->frame.w*4;
+
+  void* pY    = CVPixelBufferGetBaseAddressOfPlane(i, 0);
+  void* pCbCr = CVPixelBufferGetBaseAddressOfPlane(i, 1);
+
+  size_t strideY    = CVPixelBufferGetBytesPerRowOfPlane(i, 0);
+  size_t strideCbCr = CVPixelBufferGetBytesPerRowOfPlane(i, 1);
 
   size_t sizeInBytes = [self d]->frame.h * [self d]->frame.bytesPerRow;
   [self d]->data.resize(sizeInBytes);
-  memcpy([self d]->data.data(), CVPixelBufferGetBaseAddress(i), sizeInBytes);
+
+  const size_t byteWidth = ([self d]->frame.w * 4);
+  const size_t yMax = [self d]->frame.h;
+  for(size_t y=0; y<yMax; y++)
+  {
+    size_t j = y/2;
+    uint8_t* dst     = [self d]->data.data() + (y*[self d]->frame.bytesPerRow);
+    uint8_t* srcY    = static_cast<uint8_t*>(pY   ) + (y*strideY   );
+    uint8_t* srcCbCr = static_cast<uint8_t*>(pCbCr) + (j*strideCbCr);
+
+    uint8_t* dstMax = dst + byteWidth;
+
+    for(; dst<dstMax; dst+=8, srcY+=2, srcCbCr+=2)
+    {
+      dst[0] = srcY[0];
+      dst[1] = srcCbCr[0];
+      dst[2] = srcCbCr[1];
+      dst[3] = 255;
+
+      dst[4] = srcY[1];
+      dst[5] = srcCbCr[0];
+      dst[6] = srcCbCr[1];
+      dst[7] = 255;
+    }
+  }
 
   [self d]->frame.data = [self d]->data.data();
-
-#warning do something about the format here
 
   [self d]->frameReceivedCallback([self d]->frame);
 }

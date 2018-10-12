@@ -21,7 +21,10 @@ public:
   void addFrameReceivedCallback(const std::function<void(const Frame&)>* frameReceivedCallback);
 
   //################################################################################################
-  void removeFrameReceivedCallback(const std::function<void(const Frame&)>* frameReceivedCallback);
+  void removeFrameReceivedCallback(const std::function<void(const Frame&)>* frameReceivedCallback);  
+
+  //################################################################################################
+  virtual void viewFrame(const std::function<void(const tp_ar::Frame&)>& closure) = 0;
 
 protected:
   //################################################################################################

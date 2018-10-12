@@ -14,7 +14,10 @@ public:
   ArKitSession();
 
   //################################################################################################
-  virtual ~ArKitSession();
+  ~ArKitSession() override;
+
+  //################################################################################################
+  void viewFrame(const std::function<void(const tp_ar::Frame&)>& closure) override;
 
 private:
   struct Private;
