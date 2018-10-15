@@ -6,9 +6,12 @@
 
 #import <ARKit/ARKit.h>
 
+#include "glm/gtc/type_ptr.hpp"
+#include "glm/gtx/transform.hpp"
+#include "glm/gtx/rotate_normalized_axis.hpp"
+
 @interface ArKitShimPrivate : NSObject<ARSessionDelegate>
 {
-
 }
 @property (nonatomic, assign)tp_ar::ArKitShim::Private* d;
 - (void)restartSession;
@@ -23,7 +26,7 @@ struct ArKitShim::Private
   std::function<void(const Frame&)> frameReceivedCallback;
 
   ARSession* session NS_AVAILABLE_IOS(12_0){nullptr};
-  ArKitShimPrivate* delegate{nullptr};    
+  ArKitShimPrivate* delegate{nullptr};
 
   TPMutex mutex{TPM};
   tp_ar::Frame frame;
@@ -101,11 +104,33 @@ void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closur
 
   CVPixelBufferLockBaseAddress(i, kCVPixelBufferLock_ReadOnly);
 
-  TP_MUTEX_LOCKER(d->mutex);
+  TP_MUTEX_LOCKER([self d]->mutex);
 
   [self d]->frame.w = CVPixelBufferGetWidth(i);
   [self d]->frame.h = CVPixelBufferGetHeight(i);
   [self d]->frame.bytesPerRow = [self d]->frame.w*4;
+  {
+    glm::mat4 arTransform;
+    {
+      simd_float4x4 transform = [[frame camera] transform];
+      memcpy(glm::value_ptr(arTransform), &transform, sizeof(float)*(4*4));
+    }
+
+    {
+      //Rotate to align with the orientation of the screen.
+      glm::mat4 cameraTransform = glm::mat4(1.0f);
+      cameraTransform = glm::rotateNormalizedAxis(arTransform, glm::radians(90.0f), {0.0f, 0.0f, 1.0f});
+
+      //In our world z is up, in ArKit y is up. Rotate the scene to fix this.
+      glm::mat4 sceneTransform(1.0f);
+      sceneTransform = glm::rotateNormalizedAxis(glm::mat4(1.0f), glm::radians(90.0f), {1.0f, 0.0f, 0.0f});
+      sceneTransform = glm::inverse(sceneTransform);
+
+      [self d]->frame.cameraTransformation = sceneTransform * cameraTransform;
+    }
+  }
+
+  [self d]->frame.cameraCallibration = glm::perspective(glm::radians(63.0f), 0.75f, 0.001f, 1000.0f);
 
   void* pY    = CVPixelBufferGetBaseAddressOfPlane(i, 0);
   void* pCbCr = CVPixelBufferGetBaseAddressOfPlane(i, 1);
@@ -172,3 +197,17 @@ void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closur
 }
 
 @end
+
+
+
+//simd_float4x4 view = [[frame camera] viewMatrixForOrientation: UIInterfaceOrientationLandscapeRight];
+//{
+//  simd_float4x4 proj = [[frame camera] projectionMatrix];
+//  memcpy(glm::value_ptr([self d]->frame.cameraCallibration  ), &proj, sizeof(float)*(4*4));
+//}
+
+
+
+//glm::mat4 scale(1);
+//scale = glm::scale(scale, {1.0f, 1.0f, -1.0f});
+//[self d]->frame.cameraTransformation = ([self d]->frame.cameraTransformation)*scale;
