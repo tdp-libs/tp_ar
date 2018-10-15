@@ -123,7 +123,7 @@ void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closur
 
       //In our world z is up, in ArKit y is up. Rotate the scene to fix this.
       glm::mat4 sceneTransform(1.0f);
-      sceneTransform = glm::rotateNormalizedAxis(glm::mat4(1.0f), glm::radians(90.0f), {1.0f, 0.0f, 0.0f});
+      sceneTransform = glm::rotateNormalizedAxis(glm::mat4(1.0f), glm::radians(270.0f), {1.0f, 0.0f, 0.0f});
       sceneTransform = glm::inverse(sceneTransform);
 
       [self d]->frame.cameraTransformation = sceneTransform * cameraTransform;
