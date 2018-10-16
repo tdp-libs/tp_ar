@@ -178,7 +178,7 @@ void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closur
 {
   TP_UNUSED(session);
   std::string msg = [[error description] UTF8String];
-  tpWarning() << "didFailWithError:\n" << msg;
+  tpWarning() << "ArKitShim::didFailWithError:\n" << msg;
   [self restartSession];
 }
 
@@ -186,28 +186,14 @@ void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closur
 - (void)sessionWasInterrupted:(ARSession *)session NS_AVAILABLE_IOS(12_0)
 {
   TP_UNUSED(session);
-  tpDebug() << "sessionWasInterrupted";
+  tpWarning() << "ArKitShim::sessionWasInterrupted";
 }
 
 //##################################################################################################
 - (void)sessionInterruptionEnded:(ARSession *)session NS_AVAILABLE_IOS(12_0)
 {
   TP_UNUSED(session);
-  tpDebug() << "sessionInterruptionEnded";
+  tpWarning() << "ArKitShim::sessionInterruptionEnded";
 }
 
 @end
-
-
-
-//simd_float4x4 view = [[frame camera] viewMatrixForOrientation: UIInterfaceOrientationLandscapeRight];
-//{
-//  simd_float4x4 proj = [[frame camera] projectionMatrix];
-//  memcpy(glm::value_ptr([self d]->frame.cameraCallibration  ), &proj, sizeof(float)*(4*4));
-//}
-
-
-
-//glm::mat4 scale(1);
-//scale = glm::scale(scale, {1.0f, 1.0f, -1.0f});
-//[self d]->frame.cameraTransformation = ([self d]->frame.cameraTransformation)*scale;
