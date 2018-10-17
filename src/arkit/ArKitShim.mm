@@ -130,7 +130,19 @@ void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closur
     }
   }
 
-  [self d]->frame.cameraCallibration = glm::perspective(glm::radians(63.0f), 0.75f, 0.001f, 1000.0f);
+  {
+    glm::mat4 arProjection;
+    {
+      CGSize size;
+      size.width = [self d]->frame.h;
+      size.height = [self d]->frame.w;
+      simd_float4x4 transform = [[frame camera] projectionMatrixForOrientation: UIInterfaceOrientationPortrait viewportSize:size zNear: 0.001 zFar: 1000.0];
+      memcpy(glm::value_ptr(arProjection), &transform, sizeof(float)*(4*4));
+    }
+
+    [self d]->frame.cameraCallibration = arProjection;
+    //[self d]->frame.cameraCallibration = glm::perspective(glm::radians(63.0f), 0.75f, 0.001f, 1000.0f);
+  }
 
   void* pY    = CVPixelBufferGetBaseAddressOfPlane(i, 0);
   void* pCbCr = CVPixelBufferGetBaseAddressOfPlane(i, 1);

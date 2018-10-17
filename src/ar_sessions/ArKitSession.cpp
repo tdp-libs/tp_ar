@@ -2,34 +2,25 @@
 
 #include "tp_ar/arkit/ArKitShim.h"
 
-#warning make this non Qt.
-#include <QTimer>
-
 namespace tp_ar
 {
 
 //##################################################################################################
 struct ArKitSession::Private
 {
-  tp_ar::ArKitShim* arShim{nullptr};
-  QTimer timer;
+  tp_ar::ArKitShim arShim;
 
-  ~Private()
+  Private(ArKitSession* q):
+    arShim([q](const Frame& frame){q->frameReceived(frame);})
   {
-    delete arShim;
+
   }
 };
 
 //##################################################################################################
 ArKitSession::ArKitSession():
-  d(new Private())
+  d(new Private(this))
 {
-  d->timer.start(1000);
-  d->timer.setSingleShot(true);
-  QObject::connect(&d->timer, &QTimer::timeout, [&]()
-  {
-    d->arShim = new tp_ar::ArKitShim([&](const Frame& frame){frameReceived(frame);});
-  });
 }
 
 //##################################################################################################
@@ -41,8 +32,7 @@ ArKitSession::~ArKitSession()
 //################################################################################################
 void ArKitSession::viewFrame(const std::function<void(const tp_ar::Frame&)>& closure)
 {
-  if(d->arShim)
-    d->arShim->viewFrame(closure);
+  d->arShim.viewFrame(closure);
 }
 
 }
