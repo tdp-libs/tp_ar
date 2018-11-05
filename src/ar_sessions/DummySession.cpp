@@ -4,14 +4,7 @@ namespace tp_ar
 {
 
 //##################################################################################################
-struct DummySession::Private
-{
-
-};
-
-//##################################################################################################
-DummySession::DummySession():
-  d(new Private())
+DummySession::DummySession()
 {
 
 }
@@ -19,7 +12,13 @@ DummySession::DummySession():
 //##################################################################################################
 DummySession::~DummySession()
 {
-  delete d;
+
+}
+
+//##################################################################################################
+void DummySession::viewFrame(const std::function<void(const tp_ar::Frame&)>& closure)
+{
+  TP_UNUSED(closure);
 }
 
 }

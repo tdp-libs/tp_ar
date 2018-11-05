@@ -14,12 +14,10 @@ public:
   DummySession();
 
   //################################################################################################
-  virtual ~DummySession();
+  ~DummySession() override;
 
-private:
-  struct Private;
-  Private* d;
-  friend struct Private;
+  //################################################################################################
+  void viewFrame(const std::function<void(const tp_ar::Frame&)>& closure) override;
 };
 
 }
