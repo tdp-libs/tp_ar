@@ -8,10 +8,10 @@ namespace tp_ar
 using PlatformSession = ArKitSession;
 }
 #elif defined TDP_ANDROID
-#include "tp_ar/ar_sessions/DummySession.h"
+#include "tp_ar/ar_sessions/ArCoreSession.h"
 namespace tp_ar
 {
-using PlatformSession = DummySession;
+using PlatformSession = ArCoreSession;
 }
 #else
 #include "tp_ar/ar_sessions/DummySession.h"

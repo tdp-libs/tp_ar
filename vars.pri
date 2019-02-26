@@ -19,6 +19,12 @@ HEADERS += inc/tp_ar/ar_sessions/PlatformSession.h
 
 android{
 
+SOURCES += src/ar_sessions/ArCoreSession.cpp
+HEADERS += inc/tp_ar/ar_sessions/ArCoreSession.h
+
+SOURCES += src/arcore/ArCoreShim.cpp
+HEADERS += inc/tp_ar/arcore/ArCoreShim.h
+
 }
 
 else:iphoneos{
