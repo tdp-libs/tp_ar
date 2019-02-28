@@ -1,5 +1,5 @@
 DEPENDENCIES += lib_glm
-DEPENDENCIES += tp_utils
+DEPENDENCIES += tp_maps
 INCLUDEPATHS += tp_ar/inc/
 LIBRARIES    += tp_ar
 

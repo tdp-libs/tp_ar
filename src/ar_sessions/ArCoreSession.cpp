@@ -35,4 +35,10 @@ void ArCoreSession::viewFrame(const std::function<void(const tp_ar::Frame&)>& cl
   d->arShim.viewFrame(closure);
 }
 
+//##################################################################################################
+void ArCoreSession::pollAr()
+{
+  d->arShim.pollAr();
+}
+
 }

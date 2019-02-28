@@ -2,6 +2,8 @@
 
 #include "tp_utils/DebugUtils.h"
 
+#include "glm/gtc/type_ptr.hpp"
+
 #include <arcore_c_api.h>
 
 #include <QtAndroid>
@@ -18,10 +20,16 @@ struct ArCoreShim::Private
   bool installRequested{false};
 };
 
+
+
+
+
+
 //##################################################################################################
 ArCoreShim::ArCoreShim(const std::function<void(const Frame&)>& frameReceivedCallback):
   d(new Private)
 {
+  TP_UNUSED(frameReceivedCallback);
   tpDebug() << "A";
   ArInstallStatus installStatus;
 
@@ -91,6 +99,13 @@ ArCoreShim::ArCoreShim(const std::function<void(const Frame&)>& frameReceivedCal
 
   ArSession_setDisplayGeometry(d->arSession, displayRotation, width, height);
   tpDebug() << "I";
+
+
+  if(ArSession_resume(d->arSession) != AR_SUCCESS)
+  {
+    tpWarning() << "ArSession_resume error!";
+    return;
+  }
 }
 
 //##################################################################################################
@@ -108,7 +123,40 @@ ArCoreShim::~ArCoreShim()
 //##################################################################################################
 void ArCoreShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closure)
 {
+TP_UNUSED(closure);
+}
 
+//##################################################################################################
+void ArCoreShim::pollAr()
+{
+  if(!d->arSession)
+    return;
+
+  //ArSession_setCameraTextureName(d->arSession,
+  //                               background_renderer_.GetTextureId());
+
+  // Update session to get current frame and render camera background.
+  if (ArSession_update(d->arSession, d->arFrame) != AR_SUCCESS)
+  {
+    tpWarning() << "ArSession_update error.";
+    return;
+  }
+
+  ArCamera* arCamera{nullptr};
+  ArFrame_acquireCamera(d->arSession, d->arFrame, &arCamera);
+
+  glm::mat4 viewMatrix;
+  glm::mat4 projectionMatrix;
+  ArCamera_getViewMatrix(d->arSession, arCamera, glm::value_ptr(viewMatrix));
+  ArCamera_getProjectionMatrix(d->arSession, arCamera,
+                               /*near=*/0.1f, /*far=*/100.f,
+                               glm::value_ptr(projectionMatrix));
+
+  tpDebug() << viewMatrix[3][0] << "  " << viewMatrix[3][1] << "  " << viewMatrix[3][2];
+
+  ArTrackingState camera_tracking_state;
+  ArCamera_getTrackingState(d->arSession, arCamera, &camera_tracking_state);
+  ArCamera_release(arCamera);
 }
 
 }

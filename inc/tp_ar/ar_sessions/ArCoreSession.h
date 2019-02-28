@@ -19,6 +19,9 @@ public:
   //################################################################################################
   void viewFrame(const std::function<void(const tp_ar::Frame&)>& closure) override;
 
+  //################################################################################################
+  void pollAr() override;
+
 private:
   struct Private;
   Private* d;

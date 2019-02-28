@@ -40,6 +40,12 @@ void AbstractSession::removeFrameReceivedCallback(const std::function<void(const
 }
 
 //##################################################################################################
+void AbstractSession::pollAr()
+{
+
+}
+
+//##################################################################################################
 void AbstractSession::frameReceived(const Frame& frame)
 {
   TP_MUTEX_LOCKER(d->mutex);
