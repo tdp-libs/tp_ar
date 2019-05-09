@@ -14,3 +14,5 @@ LIBS += -L/opt/tom/arcore-android-sdk/samples/hello_ar_c/app/build/arcore-native
 # LIBS += -L/opt/tom/arcore-android-sdk/samples/hello_ar_c/app/build/arcore-native/jni/x86/
 # LIBS += -L/opt/tom/arcore-android-sdk/samples/hello_ar_c/app/build/arcore-native/jni/x86_64/
 ```
+
+# ARKit on iOS
