@@ -4,7 +4,8 @@ namespace tp_ar
 {
 
 //##################################################################################################
-DummySession::DummySession()
+DummySession::DummySession(tp_maps::Map* map):
+  AbstractSession(map)
 {
 
 }

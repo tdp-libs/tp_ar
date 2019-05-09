@@ -7,14 +7,16 @@
 
 namespace tp_ar
 {
+class AbstractBackgroundLayer;
 
 //##################################################################################################
+//! Details of a frame each time it is returned from the ar session
+/*!
+To get the image data use backgroundLayer->viewImageData to access the raw bytes.
+*/
 struct TP_AR_SHARED_EXPORT Frame
 {
-  uint8_t* data{nullptr};
-  size_t w{0};
-  size_t h{0};
-  size_t bytesPerRow{0};
+  AbstractBackgroundLayer* backgroundLayer;
 
   //! View matrix
   glm::mat4 cameraTransformation;

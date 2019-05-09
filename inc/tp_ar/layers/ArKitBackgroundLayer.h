@@ -1,31 +1,40 @@
-#ifndef tp_ar_ArCoreSession_h
-#define tp_ar_ArCoreSession_h
+#ifndef tp_ar_ArKitBackgroundLayer_h
+#define tp_ar_ArKitBackgroundLayer_h
 
-#include "tp_ar/AbstractSession.h"
+#include "tp_ar/AbstractBackgroundLayer.h"
+
+#include "tp_maps/Layer.h"
+
+#include "tp_utils/TPPixel.h"
 
 namespace tp_ar
 {
+class ArKitSession;
 
 //##################################################################################################
-class TP_AR_SHARED_EXPORT ArCoreSession : public AbstractSession
+class ArKitBackgroundLayer : public AbstractBackgroundLayer
 {
 public:
   //################################################################################################
-  ArCoreSession(tp_maps::Map* map);
+  ArKitBackgroundLayer(ArKitSession* session);
 
   //################################################################################################
-  ~ArCoreSession() override;
+  ~ArKitBackgroundLayer() override;
 
   //################################################################################################
-  void viewFrame(const std::function<void(const tp_ar::Frame&)>& closure) override;
+  void updateTexture();
+
+protected:
+  //################################################################################################
+  void render(tp_maps::RenderInfo& renderInfo) override;
 
   //################################################################################################
-  void pollAr() override;
+  void invalidateBuffers() override;
 
 private:
   struct Private;
-  Private* d;
   friend struct Private;
+  Private* d;
 };
 
 }

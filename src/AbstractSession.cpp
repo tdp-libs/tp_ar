@@ -6,51 +6,18 @@ namespace tp_ar
 {
 
 //##################################################################################################
-struct AbstractSession::Private
+AbstractSession::AbstractSession(tp_maps::Map* map)
 {
-  TPMutex mutex{TPM};
-  std::vector<const std::function<void(const Frame&)>*> frameReceivedCallbacks;
-};
-
-//##################################################################################################
-AbstractSession::AbstractSession():
-  d(new Private())
-{
-
+  TP_UNUSED(map);
 }
 
 //##################################################################################################
-AbstractSession::~AbstractSession()
-{
-  delete d;
-}
-
-//##################################################################################################
-void AbstractSession::addFrameReceivedCallback(const std::function<void(const Frame&)>* frameReceivedCallback)
-{
-  TP_MUTEX_LOCKER(d->mutex);
-  d->frameReceivedCallbacks.push_back(frameReceivedCallback);
-}
-
-//##################################################################################################
-void AbstractSession::removeFrameReceivedCallback(const std::function<void(const Frame&)>* frameReceivedCallback)
-{
-  TP_MUTEX_LOCKER(d->mutex);
-  tpRemoveOne(d->frameReceivedCallbacks, frameReceivedCallback);
-}
+AbstractSession::~AbstractSession() = default;
 
 //##################################################################################################
 void AbstractSession::pollAr()
 {
 
-}
-
-//##################################################################################################
-void AbstractSession::frameReceived(const Frame& frame)
-{
-  TP_MUTEX_LOCKER(d->mutex);
-  for(auto frameReceivedCallback: d->frameReceivedCallbacks)
-    (*frameReceivedCallback)(frame);
 }
 
 }

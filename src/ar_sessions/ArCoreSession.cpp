@@ -18,7 +18,8 @@ struct ArCoreSession::Private
 };
 
 //##################################################################################################
-ArCoreSession::ArCoreSession():
+ArCoreSession::ArCoreSession(tp_maps::Map* map):
+  AbstractSession(map),
   d(new Private(this))
 {
 }

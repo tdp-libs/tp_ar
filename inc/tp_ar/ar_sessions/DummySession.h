@@ -11,7 +11,7 @@ class TP_AR_SHARED_EXPORT DummySession : public AbstractSession
 {
 public:
   //################################################################################################
-  DummySession();
+  DummySession(tp_maps::Map* map);
 
   //################################################################################################
   ~DummySession() override;

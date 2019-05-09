@@ -3,16 +3,17 @@
 
 #include "tp_utils/DebugUtils.h"
 #include "tp_utils/MutexUtils.h"
-
-#import <ARKit/ARKit.h>
+#include "tp_utils/TimeUtils.h"
 
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtx/transform.hpp"
 #include "glm/gtx/rotate_normalized_axis.hpp"
 
+#import <ARKit/ARKit.h>
+
 @interface ArKitShimPrivate : NSObject<ARSessionDelegate>
 {
-}
+                                }
 @property (nonatomic, assign)tp_ar::ArKitShim::Private* d;
 - (void)restartSession;
 @end
@@ -23,17 +24,24 @@ namespace tp_ar
 //##################################################################################################
 struct ArKitShim::Private
 {
-  std::function<void(const Frame&)> frameReceivedCallback;
+  std::function<void(Frame&)> frameReceivedCallback;
 
   ARSession* session NS_AVAILABLE_IOS(12_0){nullptr};
   ArKitShimPrivate* delegate{nullptr};
 
   TPMutex mutex{TPM};
   tp_ar::Frame frame;
+  size_t frameW{0};
+  size_t frameH{0};
+  size_t bytesPerRow{0};
   std::vector<uint8_t> data;
 
+  TPMutex rgbDataMutex{TPM};
+  std::vector<uint8_t> dataCopy;
+  std::vector<TPPixel> rgbData;
+
   //################################################################################################
-  Private(const std::function<void(const Frame&)>& frameReceivedCallback_):
+  Private(const std::function<void(Frame&)>& frameReceivedCallback_):
     frameReceivedCallback(frameReceivedCallback_)
   {
 
@@ -41,7 +49,7 @@ struct ArKitShim::Private
 };
 
 //##################################################################################################
-ArKitShim::ArKitShim(const std::function<void(const Frame&)>& frameReceivedCallback):
+ArKitShim::ArKitShim(const std::function<void(Frame&)>& frameReceivedCallback):
   d(new Private(frameReceivedCallback))
 {
   if(@available(iOS 12, *))
@@ -70,6 +78,63 @@ void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closur
 {
   TP_MUTEX_LOCKER(d->mutex);
   closure(d->frame);
+}
+//##################################################################################################
+void ArKitShim::viewFrameData(const std::function<void(const tp_ar::Frame& frame, size_t w, size_t h, const TPPixel* data)>& closure)
+{
+  TP_MUTEX_LOCKER(d->rgbDataMutex);
+
+  //We take a copy of the data here to avoid blocking the render path.
+  size_t w{0};
+  size_t h{0};
+  tp_ar::Frame frame = d->frame;
+  {
+    TP_MUTEX_LOCKER(d->mutex);
+    w = d->frameW;
+    h = d->frameH;
+    d->dataCopy = d->data;
+  }
+
+  if(w<1 || h<1)
+    return;
+
+  //We need to rotate the image to get it correctly orientated to the device.
+  auto frameW = h;
+  auto frameH = w;
+
+  d->rgbData.resize(w*h);
+
+  auto bytesPerRow = w*4;
+
+  size_t yMax = h;
+  for(size_t y=0; y<yMax; y++)
+  {
+    auto dstX = (yMax-1)-y;
+    const uint8_t* src = d->dataCopy.data() + (bytesPerRow * y);
+    const uint8_t* srcMax = src + bytesPerRow;
+    for(size_t x=w-1; src<srcMax; src+=4, x--)
+    {
+      double Y  = double(src[0]);
+      double Cb = double(src[1]);
+      double Cr = double(src[2]);
+
+      auto dstY = (frameH-1)-x;
+      auto& p = d->rgbData.at((dstY*frameW)+dstX);
+      p.r = uint8_t(tpBound(0, int(Y + 1.40200 * (Cr - 0x80)), 255));
+      p.g = uint8_t(tpBound(0, int(Y - 0.34414 * (Cb - 0x80) - 0.71414 * (Cr - 0x80)), 255));
+      p.b = uint8_t(tpBound(0, int(Y + 1.77200 * (Cb - 0x80)), 255));
+      p.a = 255;
+    }
+  }
+
+  closure(frame, frameW, frameH, d->rgbData.data());
+}
+
+//##################################################################################################
+void ArKitShim::viewYCbCr(const std::function<void(size_t w, size_t h, const std::vector<uint8_t>& data)>& closure)
+{
+  TP_MUTEX_LOCKER(d->mutex);
+  closure(d->frameW, d->frameH, d->data);
 }
 
 }
@@ -106,9 +171,10 @@ void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closur
 
   TP_MUTEX_LOCKER([self d]->mutex);
 
-  [self d]->frame.w = CVPixelBufferGetWidth(i);
-  [self d]->frame.h = CVPixelBufferGetHeight(i);
-  [self d]->frame.bytesPerRow = [self d]->frame.w*4;
+  [self d]->frameW = CVPixelBufferGetWidth(i);
+  [self d]->frameH = CVPixelBufferGetHeight(i);
+  [self d]->bytesPerRow = [self d]->frameW*4;
+
   {
     glm::mat4 arTransform;
     {
@@ -134,8 +200,8 @@ void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closur
     glm::mat4 arProjection;
     {
       CGSize size;
-      size.width = [self d]->frame.h;
-      size.height = [self d]->frame.w;
+      size.width  = [self d]->frameH;
+      size.height = [self d]->frameW;
       simd_float4x4 transform = [[frame camera] projectionMatrixForOrientation: UIInterfaceOrientationPortrait viewportSize:size zNear: 0.001 zFar: 1000.0];
       memcpy(glm::value_ptr(arProjection), &transform, sizeof(float)*(4*4));
     }
@@ -150,15 +216,15 @@ void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closur
   size_t strideY    = CVPixelBufferGetBytesPerRowOfPlane(i, 0);
   size_t strideCbCr = CVPixelBufferGetBytesPerRowOfPlane(i, 1);
 
-  size_t sizeInBytes = [self d]->frame.h * [self d]->frame.bytesPerRow;
+  size_t sizeInBytes = [self d]->frameH * [self d]->bytesPerRow;
   [self d]->data.resize(sizeInBytes);
 
-  const size_t byteWidth = ([self d]->frame.w * 4);
-  const size_t yMax = [self d]->frame.h;
+  const size_t byteWidth = ([self d]->frameW * 4);
+  const size_t yMax = [self d]->frameH;
   for(size_t y=0; y<yMax; y++)
   {
     size_t j = y/2;
-    uint8_t* dst     = [self d]->data.data() + (y*[self d]->frame.bytesPerRow);
+    uint8_t* dst     = [self d]->data.data() + (y*[self d]->bytesPerRow);
     uint8_t* srcY    = static_cast<uint8_t*>(pY   ) + (y*strideY   );
     uint8_t* srcCbCr = static_cast<uint8_t*>(pCbCr) + (j*strideCbCr);
 
@@ -177,8 +243,6 @@ void ArKitShim::viewFrame(const std::function<void(const tp_ar::Frame&)>& closur
       dst[7] = 255;
     }
   }
-
-  [self d]->frame.data = [self d]->data.data();
 
   [self d]->frameReceivedCallback([self d]->frame);
 }
