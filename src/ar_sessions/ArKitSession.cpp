@@ -19,7 +19,7 @@ struct ArKitSession::Private
   Private(ArKitSession* q_, tp_maps::Map* map):
     q(q_),
     backgroundLayer(new ArKitBackgroundLayer(q)),
-    arShim(([&](Frame& frame){frameReceived(frame);}))
+    arShim(([&](Frame& frame){frameReceived(frame);}), map)
   {
     backgroundLayer->setDefaultRenderPass(tp_maps::RenderPass::Background);
     map->addLayer(backgroundLayer);
@@ -63,6 +63,12 @@ void ArKitSession::viewFrameData(const std::function<void(const tp_ar::Frame& fr
 void ArKitSession::viewYCbCr(const std::function<void(size_t w, size_t h, const std::vector<uint8_t>& data)>& closure)
 {
   d->arShim.viewYCbCr(closure);
+}
+
+//##################################################################################################
+glm::vec2 ArKitSession::imageScale()
+{
+  return d->arShim.imageScale();
 }
 
 //##################################################################################################

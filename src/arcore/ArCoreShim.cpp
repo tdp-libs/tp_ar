@@ -30,7 +30,6 @@ ArCoreShim::ArCoreShim(const std::function<void(const Frame&)>& frameReceivedCal
   d(new Private)
 {
   TP_UNUSED(frameReceivedCallback);
-  tpDebug() << "A";
   ArInstallStatus installStatus;
 
   // If install was not yet requested, that means that we are resuming the
@@ -46,7 +45,6 @@ ArCoreShim::ArCoreShim(const std::function<void(const Frame&)>& frameReceivedCal
 
   QAndroidJniEnvironment envObj;
 
-  tpDebug() << "B";
   void* env      = envObj;
   void* context  = jobjContext;
   void* activity = jobjActivity;
@@ -56,7 +54,6 @@ ArCoreShim::ArCoreShim(const std::function<void(const Frame&)>& frameReceivedCal
     tpWarning() << "ArCoreApk_requestInstall failed!";
     return;
   }
-  tpDebug() << "C";
 
   switch (installStatus)
   {
@@ -66,7 +63,6 @@ ArCoreShim::ArCoreShim(const std::function<void(const Frame&)>& frameReceivedCal
       d->installRequested = true;
       return;
   }
-  tpDebug() << "D";
 
   // This method can and will fail in user-facing situations.
   if(ArSession_create(env, context, &d->arSession) != AR_SUCCESS)
@@ -74,14 +70,12 @@ ArCoreShim::ArCoreShim(const std::function<void(const Frame&)>& frameReceivedCal
     tpWarning() << "ArSession_create failed!";
     return;
   }
-  tpDebug() << "E";
 
   if(!d->arSession)
   {
     tpWarning() << "Null ArSession!";
     return;
   }
-  tpDebug() << "F";
 
   ArFrame_create(d->arSession, &d->arFrame);
 
@@ -90,15 +84,12 @@ ArCoreShim::ArCoreShim(const std::function<void(const Frame&)>& frameReceivedCal
     tpWarning() << "Null ArFrame!";
     return;
   }
-  tpDebug() << "G";
 
   int width = 100;
   int height = 100;
   int displayRotation = 0;
-  tpDebug() << "H";
 
   ArSession_setDisplayGeometry(d->arSession, displayRotation, width, height);
-  tpDebug() << "I";
 
 
   if(ArSession_resume(d->arSession) != AR_SUCCESS)
@@ -151,8 +142,6 @@ void ArCoreShim::pollAr()
   ArCamera_getProjectionMatrix(d->arSession, arCamera,
                                /*near=*/0.1f, /*far=*/100.f,
                                glm::value_ptr(projectionMatrix));
-
-  tpDebug() << viewMatrix[3][0] << "  " << viewMatrix[3][1] << "  " << viewMatrix[3][2];
 
   ArTrackingState camera_tracking_state;
   ArCamera_getTrackingState(d->arSession, arCamera, &camera_tracking_state);

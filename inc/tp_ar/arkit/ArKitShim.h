@@ -3,7 +3,14 @@
 
 #include "tp_utils/TPPixel.h"
 
+#include "glm/glm.hpp"
+
 #include <functional>
+
+namespace tp_maps
+{
+class Map;
+}
 
 namespace tp_ar
 {
@@ -14,7 +21,7 @@ class ArKitShim
 {
 public:
   //################################################################################################
-  ArKitShim(const std::function<void(Frame&)>& frameReceivedCallback);
+  ArKitShim(const std::function<void(Frame&)>& frameReceivedCallback, tp_maps::Map* map);
 
   //################################################################################################
   ~ArKitShim();  
@@ -27,6 +34,9 @@ public:
 
   //################################################################################################
   void viewYCbCr(const std::function<void(size_t w, size_t h, const std::vector<uint8_t>& data)>& closure);
+
+  //################################################################################################
+  glm::vec2 imageScale();
 
   struct Private;
   Private* d;

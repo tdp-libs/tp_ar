@@ -1,6 +1,8 @@
 #include "tp_ar/arkit/ArKitShim.h"
 #include "tp_ar/Frame.h"
 
+#include "tp_maps/Map.h"
+
 #include "tp_utils/DebugUtils.h"
 #include "tp_utils/MutexUtils.h"
 #include "tp_utils/TimeUtils.h"
@@ -12,8 +14,7 @@
 #import <ARKit/ARKit.h>
 
 @interface ArKitShimPrivate : NSObject<ARSessionDelegate>
-{
-                                }
+{}
 @property (nonatomic, assign)tp_ar::ArKitShim::Private* d;
 - (void)restartSession;
 @end
@@ -25,6 +26,7 @@ namespace tp_ar
 struct ArKitShim::Private
 {
   std::function<void(Frame&)> frameReceivedCallback;
+  tp_maps::Map* map;
 
   ARSession* session NS_AVAILABLE_IOS(12_0){nullptr};
   ArKitShimPrivate* delegate{nullptr};
@@ -36,21 +38,25 @@ struct ArKitShim::Private
   size_t bytesPerRow{0};
   std::vector<uint8_t> data;
 
+  TPMutex imageScaleMutex{TPM};
+  glm::vec2 imageScale{1.0f, 1.0f};
+
   TPMutex rgbDataMutex{TPM};
   std::vector<uint8_t> dataCopy;
   std::vector<TPPixel> rgbData;
 
   //################################################################################################
-  Private(const std::function<void(Frame&)>& frameReceivedCallback_):
-    frameReceivedCallback(frameReceivedCallback_)
+  Private(const std::function<void(Frame&)>& frameReceivedCallback_, tp_maps::Map* map_):
+    frameReceivedCallback(frameReceivedCallback_),
+    map(map_)
   {
 
   }
 };
 
 //##################################################################################################
-ArKitShim::ArKitShim(const std::function<void(Frame&)>& frameReceivedCallback):
-  d(new Private(frameReceivedCallback))
+ArKitShim::ArKitShim(const std::function<void(Frame&)>& frameReceivedCallback, tp_maps::Map* map):
+  d(new Private(frameReceivedCallback, map))
 {
   if(@available(iOS 12, *))
   {
@@ -137,6 +143,13 @@ void ArKitShim::viewYCbCr(const std::function<void(size_t w, size_t h, const std
   closure(d->frameW, d->frameH, d->data);
 }
 
+//##################################################################################################
+glm::vec2 ArKitShim::imageScale()
+{
+  TP_MUTEX_LOCKER(d->imageScaleMutex);
+  return d->imageScale;
+}
+
 }
 
 //##################################################################################################
@@ -197,17 +210,34 @@ void ArKitShim::viewYCbCr(const std::function<void(size_t w, size_t h, const std
   }
 
   {
-    glm::mat4 arProjection;
+    CGSize viewportSize;
+    viewportSize.width  = [self d]->map->width();
+    viewportSize.height = [self d]->map->height();
+
+    //Swap x and y
+    CGSize imageSize;
+    imageSize.width  = [self d]->frameH;
+    imageSize.height = [self d]->frameW;
+
     {
-      CGSize size;
-      size.width  = [self d]->frameH;
-      size.height = [self d]->frameW;
-      simd_float4x4 transform = [[frame camera] projectionMatrixForOrientation: UIInterfaceOrientationPortrait viewportSize:size zNear: 0.001 zFar: 1000.0];
+      glm::mat4 arProjection;
+      simd_float4x4 transform = [[frame camera] projectionMatrixForOrientation: UIInterfaceOrientationPortrait viewportSize:viewportSize zNear: 0.001 zFar: 1000.0];
       memcpy(glm::value_ptr(arProjection), &transform, sizeof(float)*(4*4));
+      [self d]->frame.cameraCallibration = arProjection;
     }
 
-    [self d]->frame.cameraCallibration = arProjection;
-    //[self d]->frame.cameraCallibration = glm::perspective(glm::radians(63.0f), 0.75f, 0.001f, 1000.0f);
+    if(imageSize.width>0 && imageSize.height>0)
+    {
+      float sx = float(imageSize.width ) / float(viewportSize.width );
+      float sy = float(imageSize.height) / float(viewportSize.height);
+
+      if(float s = tpMin(sx, sy); s>0.00001f)
+      {
+        TP_MUTEX_LOCKER([self d]->imageScaleMutex);
+        [self d]->imageScale.x = sx/s;
+        [self d]->imageScale.y = sy/s;
+      }
+    }
   }
 
   void* pY    = CVPixelBufferGetBaseAddressOfPlane(i, 0);

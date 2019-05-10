@@ -3,6 +3,8 @@
 
 #include "tp_ar/AbstractSession.h"
 
+#include "glm/glm.hpp"
+
 namespace tp_ar
 {
 
@@ -24,6 +26,9 @@ public:
 
   //################################################################################################
   void viewYCbCr(const std::function<void(size_t w, size_t h, const std::vector<uint8_t>& data)>& closure);
+
+  //################################################################################################
+  glm::vec2 imageScale();
 
   //################################################################################################
   AbstractBackgroundLayer* backgroundLayer() override;

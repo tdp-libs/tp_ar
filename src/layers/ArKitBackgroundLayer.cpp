@@ -22,6 +22,7 @@ struct ArKitBackgroundLayer::Private
 
   tp_maps::ImageShader::VertexBuffer* vertexBuffer{nullptr};
   bool updateVertexBuffer{true};
+  glm::vec2 imageScale{1.0f, 1.0f};
 
   //################################################################################################
   Private(ArKitSession* session_):
@@ -61,6 +62,11 @@ ArKitBackgroundLayer::~ArKitBackgroundLayer()
 void ArKitBackgroundLayer::updateTexture()
 {
   d->updateTexture = true;
+  if(d->imageScale != d->session->imageScale())
+  {
+    d->imageScale = d->session->imageScale();
+    d->updateVertexBuffer = true;
+  }
   update();
 }
 
@@ -116,15 +122,17 @@ void ArKitBackgroundLayer::render(tp_maps::RenderInfo& renderInfo)
 
     glm::vec2 t(1.0f, 1.0f);
 
-    float w =  1.0f;
-    float h =  1.0f;
-    float x = -1.0f;
-    float y = -1.0f;
+    auto s = d->session->imageScale();
 
-    d->verts.push_back(tp_maps::ImageShader::Vertex({w,y,0}, {0,0,1}, { t.x, 0.0f}));
-    d->verts.push_back(tp_maps::ImageShader::Vertex({w,h,0}, {0,0,1}, {0.0f, 0.0f}));
-    d->verts.push_back(tp_maps::ImageShader::Vertex({x,h,0}, {0,0,1}, {0.0f,  t.y}));
-    d->verts.push_back(tp_maps::ImageShader::Vertex({x,y,0}, {0,0,1}, { t.x,  t.y}));
+    float x0 = -1.0f*s.x;
+    float y0 = -1.0f*s.y;
+    float x1 =  1.0f*s.x;
+    float y1 =  1.0f*s.y;
+
+    d->verts.push_back(tp_maps::ImageShader::Vertex({x1,y0,0}, {0,0,1}, { t.x, 0.0f}));
+    d->verts.push_back(tp_maps::ImageShader::Vertex({x1,y1,0}, {0,0,1}, {0.0f, 0.0f}));
+    d->verts.push_back(tp_maps::ImageShader::Vertex({x0,y1,0}, {0,0,1}, {0.0f,  t.y}));
+    d->verts.push_back(tp_maps::ImageShader::Vertex({x0,y0,0}, {0,0,1}, { t.x,  t.y}));
 
     delete d->vertexBuffer;
     d->vertexBuffer = shader->generateVertexBuffer(map(), d->indexes, d->verts);
